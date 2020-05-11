@@ -1,0 +1,14 @@
+Players can *shift* to sneak.
+Sneaking allows them to be hidden if no mobs or players can see them (invisible or behind the player)
+
+While sneaking
+	If player is hidden
+		The player can steal from other players or mobs inventories by RClicking on them form behind
+
+		Only 1 item from player inventory per steal with a chance of warning the other player that the steal has happened and a cooldown per steal
+		Mobs will use a loottable drops or defined by config
+		Mobs will NOT be affected by 1 item per steal or cooldown
+
+	Render icon for hidden/detected
+		Icon pops up and fades shortly after when stance changes
+
