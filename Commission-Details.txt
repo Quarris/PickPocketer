@@ -1,8 +1,9 @@
 Players can *shift* to sneak.
 Sneaking allows them to be hidden if no mobs or players can see them (invisible or behind the player)
+The hidden status comes from the mob/player that the user is looking at.
 
 While sneaking
-	If player is hidden
+	If player is hidden from the entity
 		The player can steal from other players or mobs inventories by RClicking on them form behind
 
 		Only 1 item from player inventory per steal with a chance of warning the other player that the steal has happened and a cooldown per steal
@@ -12,3 +13,20 @@ While sneaking
 	Render icon for hidden/detected
 		Icon pops up and fades shortly after when stance changes
 
+
+
+Timeline
+--------------------------------------------------------------------------------
+- Player hidden status logic (2 hours)
+- Steal mechanic (total 4 hours + 30 minutes)
+	- Create steal inventory (1 hour + 30 minutes)
+	- Player restrictions for 1 item per steal + cooldown (1 hour)
+	- Generate mob drops (lootable or config) (2 hour)
+- Render icon (30 min)
+
+Total time = 7 hours
+7 * 10 = 70 GBP
+no QLib dependency
+
+Final pay: 70 GBP
+Payment method: 50/50, 35 GBP at start, 35 GBP at the end
