@@ -5,7 +5,9 @@ import net.minecraft.entity.EntityLiving;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.inventory.EntityEquipmentSlot;
 import net.minecraft.inventory.IInventory;
+import net.minecraft.inventory.ItemStackHelper;
 import net.minecraft.item.ItemStack;
+import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.util.DamageSource;
 import net.minecraft.util.NonNullList;
 import net.minecraft.util.ResourceLocation;
@@ -13,6 +15,7 @@ import net.minecraft.util.text.ITextComponent;
 import net.minecraft.world.WorldServer;
 import net.minecraft.world.storage.loot.LootContext;
 import net.minecraft.world.storage.loot.LootTable;
+import net.minecraftforge.common.util.INBTSerializable;
 import net.minecraftforge.fml.common.ObfuscationReflectionHelper;
 
 import java.lang.reflect.Field;
@@ -20,7 +23,7 @@ import java.lang.reflect.Method;
 import java.util.List;
 import java.util.Random;
 
-public class InventoryMob implements IInventory {
+public class InventoryMob implements IInventory, INBTSerializable<NBTTagCompound> {
 
     private static final Field rand = ObfuscationReflectionHelper.findField(Entity.class, "field_70146_Z");
     private static final Field deathLootTable = ObfuscationReflectionHelper.findField(EntityLiving.class, "field_184659_bA");
@@ -37,6 +40,14 @@ public class InventoryMob implements IInventory {
     }
 
     public void populateMobInventory(EntityPlayer player) {
+        if (player.world.isRemote)
+            return;
+
+        if (this.mob.getEntityData().hasKey("PP:Inventory")) {
+            this.deserializeNBT(this.mob.getEntityData().getCompoundTag("PP:Inventory"));
+            return;
+        }
+
         try {
             ResourceLocation resourcelocation = (ResourceLocation) deathLootTable.get(mob);
 
@@ -57,6 +68,8 @@ public class InventoryMob implements IInventory {
                 for (int i = 0; i < size; i++) {
                     this.setInventorySlotContents(i, loot.get(i));
                 }
+
+                this.save();
             }
         } catch (Exception ignored) {
         }
@@ -87,7 +100,7 @@ public class InventoryMob implements IInventory {
             return this.inventory.get(index);
         }
 
-        return this.mob.getItemStackFromSlot(EntityEquipmentSlot.values()[index-5]);
+        return this.mob.getItemStackFromSlot(EntityEquipmentSlot.values()[index - 5]);
     }
 
     @Override
@@ -111,12 +124,13 @@ public class InventoryMob implements IInventory {
         ItemStack stack = getStackInSlot(index);
 
         if (index < 5) {
-            this.inventory.remove(index);
+            this.inventory.set(index, ItemStack.EMPTY);
         } else {
             EntityEquipmentSlot slot = EntityEquipmentSlot.values()[index - 5];
             this.mob.setItemStackToSlot(slot, ItemStack.EMPTY);
-            System.out.println("" + this.mob);
         }
+
+        this.save();
 
         return stack;
     }
@@ -139,6 +153,10 @@ public class InventoryMob implements IInventory {
     @Override
     public void markDirty() {
 
+    }
+
+    public void save() {
+        this.mob.getEntityData().setTag("PP:Inventory", this.serializeNBT());
     }
 
     @Override
@@ -183,7 +201,7 @@ public class InventoryMob implements IInventory {
 
     @Override
     public String getName() {
-        return null;
+        return this.getDisplayName().getFormattedText();
     }
 
     @Override
@@ -198,7 +216,17 @@ public class InventoryMob implements IInventory {
 
     private void validateIndex(int index) {
         if (index >= this.getSizeInventory()) {
-            throw new RuntimeException("Invalid slot index " + index + " for mob " + this.mob);
+            throw new IllegalArgumentException("Invalid slot index " + index + " for mob " + this.mob);
         }
+    }
+
+    @Override
+    public NBTTagCompound serializeNBT() {
+        return ItemStackHelper.saveAllItems(new NBTTagCompound(), this.inventory);
+    }
+
+    @Override
+    public void deserializeNBT(NBTTagCompound nbt) {
+        ItemStackHelper.loadAllItems(nbt, this.inventory);
     }
 }

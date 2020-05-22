@@ -4,14 +4,22 @@ import net.minecraft.enchantment.EnchantmentHelper;
 import net.minecraft.entity.EntityLiving;
 import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.inventory.*;
+import net.minecraft.inventory.ClickType;
+import net.minecraft.inventory.Container;
+import net.minecraft.inventory.EntityEquipmentSlot;
+import net.minecraft.inventory.Slot;
 import net.minecraft.item.ItemArmor;
 import net.minecraft.item.ItemStack;
-import net.minecraft.util.NonNullList;
+import net.minecraft.util.text.Style;
+import net.minecraft.util.text.TextComponentTranslation;
+import net.minecraft.util.text.TextFormatting;
 import net.minecraftforge.fml.relauncher.Side;
 import net.minecraftforge.fml.relauncher.SideOnly;
 import quarris.pickpocketer.InventoryMob;
+import quarris.pickpocketer.ModConfig;
 import quarris.pickpocketer.StealingManager;
+import quarris.pickpocketer.network.PacketHandler;
+import quarris.pickpocketer.network.PacketSyncPlayer;
 
 import javax.annotation.Nullable;
 
@@ -63,14 +71,26 @@ public class ContainerSteal extends Container {
         if (slotId < 0)
             return ItemStack.EMPTY;
 
-        System.out.println("" + slotId);
-
         if (slotId > 35) {
             if (clickType == ClickType.SWAP)
                 return ItemStack.EMPTY;
 
-            ItemStack result = transferStackInSlot(player, slotId);
-            return result;
+            if (this.isPlayerSteal()) {
+                if (!player.world.isRemote) {
+                    if (player.world.rand.nextFloat() > ModConfig.notifyChance) {
+                        player.sendStatusMessage(new TextComponentTranslation("stealing.notify.player")
+                                .setStyle(new Style().setColor(TextFormatting.RED)), true);
+                        ((EntityPlayer) this.target).sendStatusMessage(new TextComponentTranslation("stealing.notify.target")
+                                .setStyle(new Style().setColor(TextFormatting.RED)), true);
+                    }
+                    player.getEntityData().setLong("PP:StolenTime", player.world.getTotalWorldTime());
+                    PacketHandler.sendToAllTracking(new PacketSyncPlayer(player.world.getTotalWorldTime()), player);
+                }
+            }
+
+            ItemStack stack = transferStackInSlot(player, slotId);
+            System.out.println(stack);
+            return stack;
         }
 
         return super.slotClick(slotId, dragType, clickType, player);
@@ -80,7 +100,10 @@ public class ContainerSteal extends Container {
     @Override
     public boolean canInteractWith(EntityPlayer player) {
         return player.getDistance(this.target) <= 3 &&
-                StealingManager.isHiddenFrom(player, this.target);
+                StealingManager.isHiddenFrom(player, this.target) &&
+                (!this.isPlayerSteal() ||
+                        !player.getEntityData().hasKey("PP:StolenTime") ||
+                        player.world.getTotalWorldTime() > player.getEntityData().getLong("PP:StolenTime") + ModConfig.cooldown);
     }
 
 
@@ -105,8 +128,7 @@ public class ContainerSteal extends Container {
                     return ItemStack.EMPTY;
                 }
             } else {
-                ItemStack stolen = slot.inventory.removeStackFromSlot(index-36);
-                if (!this.mergeItemStack(stolen, 0, 36, false)) {
+                if (!this.mergeItemStack(itemstack1, 0, 36, false)) {
                     return ItemStack.EMPTY;
                 }
             }
@@ -123,11 +145,11 @@ public class ContainerSteal extends Container {
 
         // Mob Loot
         for (int i = 0; i < 5; i++) {
-            this.addSlotToContainer(new SlotSteal(inventory, i, 44 + i * 18, 78));
+            this.addSlotToContainer(new Slot(inventory, i, 44 + i * 18, 78));
         }
 
         // Mob Left Hand
-        this.addSlotToContainer(new SlotSteal(inventory, 5, 26, 33) {
+        this.addSlotToContainer(new Slot(inventory, 5, 26, 33) {
             @SideOnly(Side.CLIENT)
             public String getSlotTexture() {
                 return "minecraft:items/empty_armor_slot_shield";
@@ -135,14 +157,14 @@ public class ContainerSteal extends Container {
         });
 
         // Mob Right Hand
-        this.addSlotToContainer(new SlotSteal(inventory, 6, 134, 33));
+        this.addSlotToContainer(new Slot(inventory, 6, 134, 33));
 
         // Mob Armor
         for (int i = 7; i < 11; i++) {
             int x = (i - 7) % 2;
             int y = (i - 7) / 2;
-            final EntityEquipmentSlot entityequipmentslot = VALID_EQUIPMENT_SLOTS[i-7];
-            this.addSlotToContainer(new SlotSteal(inventory, i, 71 + x * 18, 24 + y * 18) {
+            final EntityEquipmentSlot entityequipmentslot = VALID_EQUIPMENT_SLOTS[i - 7];
+            this.addSlotToContainer(new Slot(inventory, i, 71 + x * 18, 24 + y * 18) {
 
                 public int getSlotStackLimit() {
                     return 1;
@@ -170,7 +192,7 @@ public class ContainerSteal extends Container {
         // Target equipment slots
         for (int i = 0; i < VALID_EQUIPMENT_SLOTS.length; ++i) {
             final EntityEquipmentSlot entityequipmentslot = VALID_EQUIPMENT_SLOTS[i];
-            this.addSlotToContainer(new SlotSteal(player.inventory, 36 + (3 - i), 26 + i * 18, 21) {
+            this.addSlotToContainer(new Slot(player.inventory, 36 + (3 - i), 26 + i * 18, 21) {
                 /**
                  * Returns the maximum stack size for a given slot (usually the same as getInventoryStackLimit(), but 1
                  * in the case of armor slots)
@@ -206,17 +228,17 @@ public class ContainerSteal extends Container {
         // Target Inventory
         for (int j = 0; j < 3; ++j) {
             for (int i = 0; i < 9; ++i) {
-                this.addSlotToContainer(new SlotSteal(player.inventory, i + (j + 1) * 9, 8 + i * 18, 55 + j * 18));
+                this.addSlotToContainer(new Slot(player.inventory, i + (j + 1) * 9, 8 + i * 18, 55 + j * 18));
             }
         }
 
         // Target Hotbar
         for (int i = 0; i < 9; ++i) {
-            this.addSlotToContainer(new SlotSteal(player.inventory, i, 8 + i * 18, 111));
+            this.addSlotToContainer(new Slot(player.inventory, i, 8 + i * 18, 111));
         }
 
         // Target Offhand
-        this.addSlotToContainer(new SlotSteal(player.inventory, 40, 134, 21) {
+        this.addSlotToContainer(new Slot(player.inventory, 40, 134, 21) {
             @Nullable
             @SideOnly(Side.CLIENT)
             public String getSlotTexture() {

@@ -16,6 +16,7 @@ import quarris.pickpocketer.PickPocketer;
 import quarris.pickpocketer.StealingManager;
 
 @SuppressWarnings("ALL")
+@SideOnly(Side.CLIENT)
 @Mod.EventBusSubscriber(value = Side.CLIENT, modid = PickPocketer.MODID)
 public class ClientEvents {
 
@@ -30,9 +31,12 @@ public class ClientEvents {
 
             EntityLivingBase target = Helper.getLookingAtEntity(player, player.world, player.getPositionEyes(event.getPartialTicks()), player.getLook(event.getPartialTicks()), 3);
 
+            if (target instanceof EntityPlayer && ((EntityPlayer) target).isCreative())
+                return;
+
             if (target != null) {
-                int x = event.getResolution().getScaledWidth()/2 - 10;
-                int y = event.getResolution().getScaledHeight()/2 + 7;
+                int x = event.getResolution().getScaledWidth() / 2 - 10;
+                int y = event.getResolution().getScaledHeight() / 2 + 7;
 
                 int u = 0;
                 int v = StealingManager.isHiddenFrom(player, target) ? 5 : 0;
@@ -41,7 +45,6 @@ public class ClientEvents {
                 Minecraft.getMinecraft().getTextureManager().bindTexture(HIDDEN_STATUS);
                 Gui.drawModalRectWithCustomSizedTexture(x, y, u, v, 21, 5, 21, 10);
             }
-
         }
     }
 }
