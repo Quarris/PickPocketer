@@ -9,9 +9,11 @@ import net.minecraft.util.ResourceLocation;
 import net.minecraftforge.client.event.RenderGameOverlayEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
+import net.minecraftforge.fml.common.registry.EntityRegistry;
 import net.minecraftforge.fml.relauncher.Side;
 import net.minecraftforge.fml.relauncher.SideOnly;
 import quarris.pickpocketer.Helper;
+import quarris.pickpocketer.ModConfig;
 import quarris.pickpocketer.PickPocketer;
 import quarris.pickpocketer.StealingManager;
 
@@ -35,6 +37,12 @@ public class ClientEvents {
                 return;
 
             if (target != null) {
+                for (String entityName : ModConfig.blacklist) {
+                    if (EntityRegistry.getEntry(target.getClass()).getRegistryName().toString().equals(entityName)) {
+                        return;
+                    }
+                }
+
                 int x = event.getResolution().getScaledWidth() / 2 - 10;
                 int y = event.getResolution().getScaledHeight() / 2 + 7;
 

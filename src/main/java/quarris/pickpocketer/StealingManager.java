@@ -3,12 +3,14 @@ package quarris.pickpocketer;
 import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.ItemStack;
+import net.minecraft.network.datasync.EntityDataManager;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.text.TextComponentTranslation;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
+import net.minecraftforge.fml.common.registry.EntityRegistry;
 
 @SuppressWarnings("unused")
 @Mod.EventBusSubscriber(modid = PickPocketer.MODID)
@@ -22,6 +24,12 @@ public class StealingManager {
         if (event.getTarget() instanceof EntityLivingBase) {
             EntityPlayer player = event.getEntityPlayer();
             EntityLivingBase target = (EntityLivingBase) event.getTarget();
+
+            for (String entityName : ModConfig.blacklist) {
+                if (EntityRegistry.getEntry(target.getClass()).getRegistryName().toString().equals(entityName)) {
+                    return;
+                }
+            }
 
             if (!player.isSneaking() || (target instanceof EntityPlayer && ((EntityPlayer) target).isCreative())) {
                 return;

@@ -2,14 +2,14 @@
     {
         "modid": "pickpocketer",
         "name": "Pick Pocketer",
-        "description": "Pick Pocketer allows you to pick pockets from players and mobs.",
+        "description": "Pick Pocketer allows you to steal from players and mobs.",
         "version": "${version}",
         "mcversion": "${mcversion}",
         "url": "",
         "updateUrl": "",
         "authorList": ["Quarris", "Lobonhibbin"],
         "credits": "",
-        "logoFile": "",
+        "logoFile": "logo.png",
         "screenshots": [],
         "dependencies": []
     }
