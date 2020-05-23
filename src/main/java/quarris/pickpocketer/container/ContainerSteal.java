@@ -4,6 +4,7 @@ import net.minecraft.enchantment.EnchantmentHelper;
 import net.minecraft.entity.EntityLiving;
 import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.inventory.ClickType;
 import net.minecraft.inventory.Container;
 import net.minecraft.inventory.EntityEquipmentSlot;
@@ -68,9 +69,6 @@ public class ContainerSteal extends Container {
 
     @Override
     public ItemStack slotClick(int slotId, int dragType, ClickType clickType, EntityPlayer player) {
-        if (slotId < 0)
-            return ItemStack.EMPTY;
-
         if (slotId > 35) {
             if (clickType == ClickType.SWAP)
                 return ItemStack.EMPTY;
@@ -84,12 +82,14 @@ public class ContainerSteal extends Container {
                                 .setStyle(new Style().setColor(TextFormatting.RED)), true);
                     }
                     player.getEntityData().setLong("PP:StolenTime", player.world.getTotalWorldTime());
-                    PacketHandler.sendToAllTracking(new PacketSyncPlayer(player.world.getTotalWorldTime()), player);
+                    PacketHandler.sendTo(new PacketSyncPlayer(player.world.getTotalWorldTime()), (EntityPlayerMP) player);
                 }
             }
 
             ItemStack stack = transferStackInSlot(player, slotId);
-            System.out.println(stack);
+            if (this.getSlot(slotId).inventory instanceof InventoryMob) {
+                ((InventoryMob) this.getSlot(slotId).inventory).save();
+            }
             return stack;
         }
 

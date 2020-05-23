@@ -1,6 +1,6 @@
 package quarris.pickpocketer.network;
 
-import net.minecraft.entity.Entity;
+import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraftforge.fml.common.network.NetworkRegistry;
 import net.minecraftforge.fml.common.network.simpleimpl.IMessage;
 import net.minecraftforge.fml.common.network.simpleimpl.SimpleNetworkWrapper;
@@ -15,8 +15,8 @@ public class PacketHandler {
         INSTANCE.registerMessage(PacketSyncPlayer.class, PacketSyncPlayer.class, 0, Side.CLIENT);
     }
 
-    public static void sendToAllTracking(IMessage packet, Entity entity) {
-        INSTANCE.sendToAllTracking(packet, entity);
+    public static void sendTo(IMessage packet, EntityPlayerMP entity) {
+        INSTANCE.sendTo(packet, entity);
     }
 
 }

@@ -37,11 +37,8 @@ public class ClientEvents {
                 return;
 
             if (target != null) {
-                for (String entityName : ModConfig.blacklist) {
-                    if (EntityRegistry.getEntry(target.getClass()).getRegistryName().toString().equals(entityName)) {
-                        return;
-                    }
-                }
+                if (Helper.isEntityInArray(ModConfig.blacklist, target))
+                    return;
 
                 int x = event.getResolution().getScaledWidth() / 2 - 10;
                 int y = event.getResolution().getScaledHeight() / 2 + 7;

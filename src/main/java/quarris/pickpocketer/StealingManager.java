@@ -25,11 +25,8 @@ public class StealingManager {
             EntityPlayer player = event.getEntityPlayer();
             EntityLivingBase target = (EntityLivingBase) event.getTarget();
 
-            for (String entityName : ModConfig.blacklist) {
-                if (EntityRegistry.getEntry(target.getClass()).getRegistryName().toString().equals(entityName)) {
-                    return;
-                }
-            }
+            if (Helper.isEntityInArray(ModConfig.blacklist, target))
+                return;
 
             if (!player.isSneaking() || (target instanceof EntityPlayer && ((EntityPlayer) target).isCreative())) {
                 return;

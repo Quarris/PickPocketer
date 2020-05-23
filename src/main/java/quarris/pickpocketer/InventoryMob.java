@@ -3,15 +3,12 @@ package quarris.pickpocketer;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityLiving;
 import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.inventory.EntityEquipmentSlot;
-import net.minecraft.inventory.IInventory;
-import net.minecraft.inventory.ItemStackHelper;
+import net.minecraft.inventory.*;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.util.DamageSource;
 import net.minecraft.util.NonNullList;
 import net.minecraft.util.ResourceLocation;
-import net.minecraft.util.text.ITextComponent;
 import net.minecraft.world.WorldServer;
 import net.minecraft.world.storage.loot.LootContext;
 import net.minecraft.world.storage.loot.LootTable;
@@ -23,7 +20,7 @@ import java.lang.reflect.Method;
 import java.util.List;
 import java.util.Random;
 
-public class InventoryMob implements IInventory, INBTSerializable<NBTTagCompound> {
+public class InventoryMob extends InventoryBasic implements INBTSerializable<NBTTagCompound> {
 
     private static final Field rand = ObfuscationReflectionHelper.findField(Entity.class, "field_70146_Z");
     private static final Field deathLootTable = ObfuscationReflectionHelper.findField(EntityLiving.class, "field_184659_bA");
@@ -32,11 +29,60 @@ public class InventoryMob implements IInventory, INBTSerializable<NBTTagCompound
 
     public final EntityLiving mob;
 
-    public NonNullList<ItemStack> inventory;
-
     public InventoryMob(EntityLiving mob) {
+        super(mob.getDisplayName().getFormattedText(), false, 5);
         this.mob = mob;
-        this.inventory = NonNullList.withSize(5, ItemStack.EMPTY);
+    }
+
+    @Override
+    public ItemStack getStackInSlot(int index) {
+        if (index < 5) {
+            return super.getStackInSlot(index);
+        } else if (index < 11) {
+            return this.mob.getItemStackFromSlot(this.getSlot(index));
+        } else
+            return ItemStack.EMPTY;
+    }
+
+    @Override
+    public ItemStack removeStackFromSlot(int index) {
+        if (index < 5) {
+            return super.removeStackFromSlot(index);
+        } else if (index < 11){
+            ItemStack equipment = this.getStackInSlot(index);
+            if (!equipment.isEmpty()) {
+                this.mob.setItemStackToSlot(this.getSlot(index), ItemStack.EMPTY);
+            }
+            return equipment;
+        } else
+            return ItemStack.EMPTY;
+    }
+
+    @Override
+    public void setInventorySlotContents(int index, ItemStack stack) {
+        if (index < 5) {
+            super.setInventorySlotContents(index, stack);
+        }
+    }
+
+    private EntityEquipmentSlot getSlot(int index) {
+        return EntityEquipmentSlot.values()[index-5];
+    }
+
+    @Override
+    public boolean isEmpty() {
+        if (super.isEmpty()) {
+            for (ItemStack stack : this.mob.getEquipmentAndArmor()) {
+                if (!stack.isEmpty()) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    public void save() {
+        this.mob.getEntityData().setTag("PP:Inventory", this.serializeNBT());
     }
 
     public void populateMobInventory(EntityPlayer player) {
@@ -47,6 +93,31 @@ public class InventoryMob implements IInventory, INBTSerializable<NBTTagCompound
             this.deserializeNBT(this.mob.getEntityData().getCompoundTag("PP:Inventory"));
             return;
         }
+
+        /*
+        for (ModConfig.MobLootEntry entry : ModConfig.lootOverrides) {
+            if (EntityRegistry.getEntry(this.mob.getClass()).getRegistryName().toString().equals(entry.mob)) {
+                int i = 0;
+                try {
+                    int size = Math.min(5, entry.items.length);
+                    for (; i < size; i++) {
+                        String item = entry.items[i];
+                        int min = entry.min[i];
+                        int max = entry.max[i];
+                        int amount = min + this.mob.world.rand.nextInt(max-min);
+                        ItemStack stack = new ItemStack(Objects.requireNonNull(ForgeRegistries.ITEMS.getValue(new ResourceLocation(item))), amount);
+                        this.setInventorySlotContents(i, stack);
+                    }
+                    this.save();
+                    return;
+                } catch (ArrayIndexOutOfBoundsException e) {
+                    PickPocketer.LOGGER.error("Could not load loot override for entity {}. The items, min and max count does not match.", entry.mob);
+                } catch (NullPointerException e) {
+                    PickPocketer.LOGGER.error("Could not load loot override for entity {}. The item {} was not found.", entry.mob, entry.items[i]);
+                }
+            }
+        }
+         */
 
         try {
             ResourceLocation resourcelocation = (ResourceLocation) deathLootTable.get(mob);
@@ -76,157 +147,21 @@ public class InventoryMob implements IInventory, INBTSerializable<NBTTagCompound
     }
 
     @Override
-    public int getSizeInventory() {
-        return 11;
-    }
-
-    @Override
-    public boolean isEmpty() {
-        if (!this.inventory.isEmpty()) {
-            for (ItemStack stack : this.mob.getEquipmentAndArmor()) {
-                if (!stack.isEmpty()) {
-                    return false;
-                }
-            }
-        }
-        return true;
-    }
-
-    @Override
-    public ItemStack getStackInSlot(int index) {
-        this.validateIndex(index);
-
-        if (index < 5) {
-            return this.inventory.get(index);
-        }
-
-        return this.mob.getItemStackFromSlot(EntityEquipmentSlot.values()[index - 5]);
-    }
-
-    @Override
-    public ItemStack decrStackSize(int index, int count) {
-        ItemStack stack = this.getStackInSlot(index);
-
-        if (stack.getCount() < count) {
-            return stack.copy();
-        }
-
-        int remain = stack.getCount() - count;
-        stack.setCount(remain);
-
-        ItemStack ret = stack.copy();
-        ret.setCount(count);
-        return ret;
-    }
-
-    @Override
-    public ItemStack removeStackFromSlot(int index) {
-        ItemStack stack = getStackInSlot(index);
-
-        if (index < 5) {
-            this.inventory.set(index, ItemStack.EMPTY);
-        } else {
-            EntityEquipmentSlot slot = EntityEquipmentSlot.values()[index - 5];
-            this.mob.setItemStackToSlot(slot, ItemStack.EMPTY);
-        }
-
-        this.save();
-
-        return stack;
-    }
-
-    @Override
-    public void setInventorySlotContents(int index, ItemStack stack) {
-        if (index < 5) {
-            this.inventory.set(index, stack);
-        } else {
-            EntityEquipmentSlot slot = EntityEquipmentSlot.values()[index - 5];
-            this.mob.setItemStackToSlot(slot, stack);
-        }
-    }
-
-    @Override
-    public int getInventoryStackLimit() {
-        return 64;
-    }
-
-    @Override
-    public void markDirty() {
-
-    }
-
-    public void save() {
-        this.mob.getEntityData().setTag("PP:Inventory", this.serializeNBT());
-    }
-
-    @Override
-    public boolean isUsableByPlayer(EntityPlayer player) {
-        return this.mob.getDistance(player) <= 3.0D;
-    }
-
-    @Override
-    public void openInventory(EntityPlayer player) {
-
-    }
-
-    @Override
-    public void closeInventory(EntityPlayer player) {
-
-    }
-
-    @Override
-    public boolean isItemValidForSlot(int index, ItemStack stack) {
-        return false;
-    }
-
-    @Override
-    public int getField(int id) {
-        return 0;
-    }
-
-    @Override
-    public void setField(int id, int value) {
-
-    }
-
-    @Override
-    public int getFieldCount() {
-        return 0;
-    }
-
-    @Override
-    public void clear() {
-
-    }
-
-    @Override
-    public String getName() {
-        return this.getDisplayName().getFormattedText();
-    }
-
-    @Override
-    public boolean hasCustomName() {
-        return true;
-    }
-
-    @Override
-    public ITextComponent getDisplayName() {
-        return this.mob.getDisplayName();
-    }
-
-    private void validateIndex(int index) {
-        if (index >= this.getSizeInventory()) {
-            throw new IllegalArgumentException("Invalid slot index " + index + " for mob " + this.mob);
-        }
-    }
-
-    @Override
     public NBTTagCompound serializeNBT() {
-        return ItemStackHelper.saveAllItems(new NBTTagCompound(), this.inventory);
+        NonNullList<ItemStack> inv = NonNullList.withSize(5, ItemStack.EMPTY);
+        for (int i = 0; i < 5; i++) {
+            inv.set(i, this.getStackInSlot(i));
+        }
+        return ItemStackHelper.saveAllItems(new NBTTagCompound(), inv);
     }
 
     @Override
     public void deserializeNBT(NBTTagCompound nbt) {
-        ItemStackHelper.loadAllItems(nbt, this.inventory);
+        NonNullList<ItemStack> inv = NonNullList.withSize(5, ItemStack.EMPTY);
+        ItemStackHelper.loadAllItems(nbt, inv);
+
+        for (int i = 0; i < 5; i++) {
+            this.setInventorySlotContents(i, inv.get(i));
+        }
     }
 }

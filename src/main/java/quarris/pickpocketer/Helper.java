@@ -1,10 +1,13 @@
 package quarris.pickpocketer;
 
+import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityLivingBase;
+import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.RayTraceResult;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
+import net.minecraftforge.fml.common.registry.EntityRegistry;
 
 import java.util.List;
 
@@ -30,5 +33,21 @@ public class Helper {
             }
         }
         return entity;
+    }
+
+    public static boolean isEntityInArray(String[] array, Entity entity) {
+        for (String name : array) {
+            if (entity instanceof EntityPlayer) {
+                if (name.equals("minecraft:player")) {
+                    return true;
+                }
+                continue;
+            }
+
+            if (EntityRegistry.getEntry(entity.getClass()).getRegistryName().toString().equals(name)) {
+                return true;
+            }
+        }
+        return false;
     }
 }
