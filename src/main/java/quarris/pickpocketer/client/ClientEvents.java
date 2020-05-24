@@ -9,11 +9,10 @@ import net.minecraft.util.ResourceLocation;
 import net.minecraftforge.client.event.RenderGameOverlayEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
-import net.minecraftforge.fml.common.registry.EntityRegistry;
 import net.minecraftforge.fml.relauncher.Side;
 import net.minecraftforge.fml.relauncher.SideOnly;
 import quarris.pickpocketer.Helper;
-import quarris.pickpocketer.ModConfig;
+import quarris.pickpocketer.config.ModConfig;
 import quarris.pickpocketer.PickPocketer;
 import quarris.pickpocketer.StealingManager;
 
@@ -37,7 +36,7 @@ public class ClientEvents {
                 return;
 
             if (target != null) {
-                if (Helper.isEntityInArray(ModConfig.blacklist, target))
+                if (!StealingManager.isStealableFrom(target))
                     return;
 
                 int x = event.getResolution().getScaledWidth() / 2 - 10;

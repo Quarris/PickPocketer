@@ -1,20 +1,34 @@
 package quarris.pickpocketer;
 
+import net.minecraft.entity.Entity;
+import net.minecraft.entity.EntityLiving;
 import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.ItemStack;
-import net.minecraft.network.datasync.EntityDataManager;
+import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.text.TextComponentTranslation;
+import net.minecraftforge.event.AttachCapabilitiesEvent;
+import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
-import net.minecraftforge.fml.common.registry.EntityRegistry;
+import quarris.pickpocketer.config.ModConfig;
 
 @SuppressWarnings("unused")
 @Mod.EventBusSubscriber(modid = PickPocketer.MODID)
 public class StealingManager {
+
+    @SubscribeEvent
+    public static void attachCaps(AttachCapabilitiesEvent<Entity> event) {
+        if (event.getObject() instanceof EntityLiving) {
+            if (StealingManager.isStealableFrom((EntityLiving)event.getObject())) {
+                event.addCapability(new ResourceLocation(PickPocketer.MODID, "mob_steal"), new CapabilityMobSteal((EntityLiving) event.getObject(), 5));
+            }
+        }
+    }
 
     @SubscribeEvent
     public static void onEntityInteract(PlayerInteractEvent.EntityInteractSpecific event) {
@@ -25,7 +39,7 @@ public class StealingManager {
             EntityPlayer player = event.getEntityPlayer();
             EntityLivingBase target = (EntityLivingBase) event.getTarget();
 
-            if (Helper.isEntityInArray(ModConfig.blacklist, target))
+            if (!isStealableFrom(target))
                 return;
 
             if (!player.isSneaking() || (target instanceof EntityPlayer && ((EntityPlayer) target).isCreative())) {
@@ -84,6 +98,10 @@ public class StealingManager {
         float f1 = MathHelper.sin(-yaw * 0.017453292F - (float) Math.PI);
         float f2 = -MathHelper.cos(-pitch * 0.017453292F);
         return new Vec3d((f1 * f2), 0, (f * f2));
+    }
+
+    public static boolean isStealableFrom(EntityLivingBase entity) {
+        return !Helper.isEntityInArray(ModConfig.blacklist, entity);
     }
 
     public enum StealingAttemptResult {

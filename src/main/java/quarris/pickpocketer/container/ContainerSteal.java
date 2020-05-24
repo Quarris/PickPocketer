@@ -16,9 +16,10 @@ import net.minecraft.util.text.TextComponentTranslation;
 import net.minecraft.util.text.TextFormatting;
 import net.minecraftforge.fml.relauncher.Side;
 import net.minecraftforge.fml.relauncher.SideOnly;
-import quarris.pickpocketer.InventoryMob;
-import quarris.pickpocketer.ModConfig;
+import net.minecraftforge.items.SlotItemHandler;
+import quarris.pickpocketer.CapabilityMobSteal;
 import quarris.pickpocketer.StealingManager;
+import quarris.pickpocketer.config.ModConfig;
 import quarris.pickpocketer.network.PacketHandler;
 import quarris.pickpocketer.network.PacketSyncPlayer;
 
@@ -87,9 +88,7 @@ public class ContainerSteal extends Container {
             }
 
             ItemStack stack = transferStackInSlot(player, slotId);
-            if (this.getSlot(slotId).inventory instanceof InventoryMob) {
-                ((InventoryMob) this.getSlot(slotId).inventory).save();
-            }
+            // Update the capability
             return stack;
         }
 
@@ -99,7 +98,7 @@ public class ContainerSteal extends Container {
 
     @Override
     public boolean canInteractWith(EntityPlayer player) {
-        return player.getDistance(this.target) <= 3 &&
+        return !this.target.isDead && player.getDistance(this.target) <= 3 &&
                 StealingManager.isHiddenFrom(player, this.target) &&
                 (!this.isPlayerSteal() ||
                         !player.getEntityData().hasKey("PP:StolenTime") ||
@@ -137,19 +136,23 @@ public class ContainerSteal extends Container {
         return itemstack;
     }
 
-
     private void addMobStealInventory(EntityLiving entity) {
-        InventoryMob inventory = new InventoryMob(entity);
+        CapabilityMobSteal mobInv = entity.getCapability(CapabilityMobSteal.INSTANCE, null);
+
+        if (mobInv == null)
+            return;
+
         if (!entity.world.isRemote)
-            inventory.populateMobInventory(this.player);
+            mobInv.populateInventory(this.player);
+
 
         // Mob Loot
         for (int i = 0; i < 5; i++) {
-            this.addSlotToContainer(new Slot(inventory, i, 44 + i * 18, 78));
+            this.addSlotToContainer(new SlotItemHandler(mobInv, i, 44 + i * 18, 78));
         }
 
         // Mob Left Hand
-        this.addSlotToContainer(new Slot(inventory, 5, 26, 33) {
+        this.addSlotToContainer(new SlotItemHandler(mobInv, 5, 26, 33) {
             @SideOnly(Side.CLIENT)
             public String getSlotTexture() {
                 return "minecraft:items/empty_armor_slot_shield";
@@ -157,14 +160,14 @@ public class ContainerSteal extends Container {
         });
 
         // Mob Right Hand
-        this.addSlotToContainer(new Slot(inventory, 6, 134, 33));
+        this.addSlotToContainer(new SlotItemHandler(mobInv, 6, 134, 33));
 
         // Mob Armor
         for (int i = 7; i < 11; i++) {
             int x = (i - 7) % 2;
             int y = (i - 7) / 2;
             final EntityEquipmentSlot entityequipmentslot = VALID_EQUIPMENT_SLOTS[i - 7];
-            this.addSlotToContainer(new Slot(inventory, i, 71 + x * 18, 24 + y * 18) {
+            this.addSlotToContainer(new SlotItemHandler(mobInv, i, 71 + x * 18, 24 + y * 18) {
 
                 public int getSlotStackLimit() {
                     return 1;
@@ -193,25 +196,6 @@ public class ContainerSteal extends Container {
         for (int i = 0; i < VALID_EQUIPMENT_SLOTS.length; ++i) {
             final EntityEquipmentSlot entityequipmentslot = VALID_EQUIPMENT_SLOTS[i];
             this.addSlotToContainer(new Slot(player.inventory, 36 + (3 - i), 26 + i * 18, 21) {
-                /**
-                 * Returns the maximum stack size for a given slot (usually the same as getInventoryStackLimit(), but 1
-                 * in the case of armor slots)
-                 */
-                public int getSlotStackLimit() {
-                    return 1;
-                }
-
-                /**
-                 * Check if the stack is allowed to be placed in this slot, used for armor slots as well as furnace
-                 * fuel.
-                 */
-                public boolean isItemValid(ItemStack stack) {
-                    return stack.getItem().isValidArmor(stack, entityequipmentslot, player);
-                }
-
-                /**
-                 * Return whether this slot's stack can be taken from this slot.
-                 */
                 public boolean canTakeStack(EntityPlayer playerIn) {
                     ItemStack itemstack = this.getStack();
                     return (itemstack.isEmpty() || playerIn.isCreative() || !EnchantmentHelper.hasBindingCurse(itemstack)) && super.canTakeStack(playerIn);

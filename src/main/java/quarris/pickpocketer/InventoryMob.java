@@ -3,7 +3,9 @@ package quarris.pickpocketer;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityLiving;
 import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.inventory.*;
+import net.minecraft.inventory.EntityEquipmentSlot;
+import net.minecraft.inventory.InventoryBasic;
+import net.minecraft.inventory.ItemStackHelper;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.util.DamageSource;
@@ -14,9 +16,14 @@ import net.minecraft.world.storage.loot.LootContext;
 import net.minecraft.world.storage.loot.LootTable;
 import net.minecraftforge.common.util.INBTSerializable;
 import net.minecraftforge.fml.common.ObfuscationReflectionHelper;
+import net.minecraftforge.fml.common.registry.EntityRegistry;
+import quarris.pickpocketer.config.MobLootEntry;
+import quarris.pickpocketer.config.ModConfig;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 
@@ -28,6 +35,7 @@ public class InventoryMob extends InventoryBasic implements INBTSerializable<NBT
     private static final Method getLootTable = ObfuscationReflectionHelper.findMethod(EntityLiving.class, "func_184647_J", ResourceLocation.class);
 
     public final EntityLiving mob;
+    private final Random random = new Random();
 
     public InventoryMob(EntityLiving mob) {
         super(mob.getDisplayName().getFormattedText(), false, 5);
@@ -48,7 +56,7 @@ public class InventoryMob extends InventoryBasic implements INBTSerializable<NBT
     public ItemStack removeStackFromSlot(int index) {
         if (index < 5) {
             return super.removeStackFromSlot(index);
-        } else if (index < 11){
+        } else if (index < 11) {
             ItemStack equipment = this.getStackInSlot(index);
             if (!equipment.isEmpty()) {
                 this.mob.setItemStackToSlot(this.getSlot(index), ItemStack.EMPTY);
@@ -66,7 +74,7 @@ public class InventoryMob extends InventoryBasic implements INBTSerializable<NBT
     }
 
     private EntityEquipmentSlot getSlot(int index) {
-        return EntityEquipmentSlot.values()[index-5];
+        return EntityEquipmentSlot.values()[index - 5];
     }
 
     @Override
@@ -85,39 +93,21 @@ public class InventoryMob extends InventoryBasic implements INBTSerializable<NBT
         this.mob.getEntityData().setTag("PP:Inventory", this.serializeNBT());
     }
 
+    public void load() {
+        this.deserializeNBT(this.mob.getEntityData().getCompoundTag("PP:Inventory"));
+    }
+
     public void populateMobInventory(EntityPlayer player) {
         if (player.world.isRemote)
             return;
 
         if (this.mob.getEntityData().hasKey("PP:Inventory")) {
-            this.deserializeNBT(this.mob.getEntityData().getCompoundTag("PP:Inventory"));
+            this.load();
             return;
         }
 
-        /*
-        for (ModConfig.MobLootEntry entry : ModConfig.lootOverrides) {
-            if (EntityRegistry.getEntry(this.mob.getClass()).getRegistryName().toString().equals(entry.mob)) {
-                int i = 0;
-                try {
-                    int size = Math.min(5, entry.items.length);
-                    for (; i < size; i++) {
-                        String item = entry.items[i];
-                        int min = entry.min[i];
-                        int max = entry.max[i];
-                        int amount = min + this.mob.world.rand.nextInt(max-min);
-                        ItemStack stack = new ItemStack(Objects.requireNonNull(ForgeRegistries.ITEMS.getValue(new ResourceLocation(item))), amount);
-                        this.setInventorySlotContents(i, stack);
-                    }
-                    this.save();
-                    return;
-                } catch (ArrayIndexOutOfBoundsException e) {
-                    PickPocketer.LOGGER.error("Could not load loot override for entity {}. The items, min and max count does not match.", entry.mob);
-                } catch (NullPointerException e) {
-                    PickPocketer.LOGGER.error("Could not load loot override for entity {}. The item {} was not found.", entry.mob, entry.items[i]);
-                }
-            }
-        }
-         */
+        if (this.generateCustomStealLoot())
+            return;
 
         try {
             ResourceLocation resourcelocation = (ResourceLocation) deathLootTable.get(mob);
@@ -144,6 +134,31 @@ public class InventoryMob extends InventoryBasic implements INBTSerializable<NBT
             }
         } catch (Exception ignored) {
         }
+    }
+
+    /**
+     * Checks if custom loot exists in the configs and attempts to generate it.
+     *
+     * @return True if the loot was generated. False otherwise.
+     */
+    private boolean generateCustomStealLoot() {
+        String mobName = EntityRegistry.getEntry(this.mob.getClass()).getRegistryName().toString();
+        if (!ModConfig.lootEntries.containsKey(mobName)) {
+            return false;
+        }
+
+        MobLootEntry entry = ModConfig.lootEntries.get(mobName);
+
+        List<MobLootEntry.ItemEntry> shuffled = new ArrayList<>(entry.loot);
+        Collections.shuffle(shuffled, random);
+
+        int size = Math.min(5, shuffled.size());
+        for (int i = 0; i < size; i++) {
+            this.setInventorySlotContents(i, shuffled.get(i).generate(random));
+        }
+
+        this.save();
+        return true;
     }
 
     @Override
