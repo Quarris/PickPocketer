@@ -1,5 +1,6 @@
 package quarris.pickpocketer.network;
 
+import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraftforge.fml.common.network.NetworkRegistry;
 import net.minecraftforge.fml.common.network.simpleimpl.IMessage;
@@ -19,4 +20,7 @@ public class PacketHandler {
         INSTANCE.sendTo(packet, entity);
     }
 
+    public static void sendToAllAround(IMessage packet, EntityLivingBase entity) {
+        INSTANCE.sendToAllAround(packet, new NetworkRegistry.TargetPoint(entity.dimension, entity.posX, entity.posY, entity.posZ, 6));
+    }
 }
