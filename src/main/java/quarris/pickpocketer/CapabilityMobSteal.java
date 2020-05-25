@@ -114,14 +114,14 @@ public class CapabilityMobSteal implements IItemHandlerModifiable, ICapabilitySe
         return true;
     }
 
-    /* EQUIPMENT METHODS */
 
+    /* EQUIPMENT METHODS */
     public EntityEquipmentSlot getEquipSlot(int index) {
         return EntityEquipmentSlot.values()[index - this.getInternalSize()];
     }
 
-    /* ITEM HANDLER METHODS */
 
+    /* ITEM HANDLER METHODS */
     @Override
     public void setStackInSlot(int slot, @Nonnull ItemStack stack) {
         if (slot < this.getInternalSize()) {
@@ -154,10 +154,15 @@ public class CapabilityMobSteal implements IItemHandlerModifiable, ICapabilitySe
         return ItemStack.EMPTY;
     }
 
+    @Override
+    public boolean isItemValid(int slot, @Nonnull ItemStack stack) {
+        return false;
+    }
+
     @Nonnull
     @Override
     public ItemStack insertItem(int slot, @Nonnull ItemStack stack, boolean simulate) {
-        throw new UnsupportedOperationException("Attempted to insert slot into a steal inventory. This should not happen. Please report this issue.");
+        return stack;
     }
 
     @Nonnull
