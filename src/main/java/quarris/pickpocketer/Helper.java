@@ -7,6 +7,7 @@ import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.RayTraceResult;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
+import net.minecraftforge.fml.common.registry.EntityEntry;
 import net.minecraftforge.fml.common.registry.EntityRegistry;
 
 import java.util.List;
@@ -44,7 +45,8 @@ public class Helper {
                 continue;
             }
 
-            if (EntityRegistry.getEntry(entity.getClass()).getRegistryName().toString().equals(name)) {
+            EntityEntry entry = EntityRegistry.getEntry(entity.getClass());
+            if (entry != null && entry.getRegistryName().toString().equals(name)) {
                 return true;
             }
         }

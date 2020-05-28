@@ -21,7 +21,6 @@ import quarris.pickpocketer.network.PacketHandler;
 import quarris.pickpocketer.proxy.CommonProxy;
 
 import javax.annotation.Nullable;
-import java.util.concurrent.Callable;
 
 @Mod(modid = PickPocketer.MODID, name = PickPocketer.NAME, version = PickPocketer.VERSION)
 public class PickPocketer {
