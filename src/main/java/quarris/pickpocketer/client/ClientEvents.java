@@ -12,7 +12,6 @@ import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import net.minecraftforge.fml.relauncher.Side;
 import net.minecraftforge.fml.relauncher.SideOnly;
 import quarris.pickpocketer.Helper;
-import quarris.pickpocketer.config.ModConfig;
 import quarris.pickpocketer.PickPocketer;
 import quarris.pickpocketer.StealingManager;
 
